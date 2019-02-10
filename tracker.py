@@ -3,7 +3,7 @@ import cv2
 
 class tracker():	
 		
-	def __init__(self, Mywindow_width, Mywindow_height, Mymargin, Myminpix = 50, My_ym = 1, My_xm = 1, Mysmooth_factor = 15):
+	def __init__(self, Mywindow_width, Mywindow_height, Mymargin, Myminpix = 40, My_ym = 1, My_xm = 1, Mysmooth_factor = 15):
 		#list of all past left and right centers
 		self.recent_centers = []
 		#print('initialized in self', self.recent_centers)

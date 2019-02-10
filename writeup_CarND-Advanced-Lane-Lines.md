@@ -16,6 +16,7 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [Chessboard_points_image]: ./camera_cal/corners_detected2.jpg "Chessboard_points_image"
+[Undistorted_Chessboard]: ./output_images/undistorted_Chessboard_image_1.jpg "Undistorted_Chessboard"
 [Undistorted]: ./output_images/undistorted_1.jpg "Undistorted"
 [binary_transform] : ./output_images/binary_transform_1.jpg "binary_transform"
 [src_ROI]: ./output_images/src_ROI_result_1.jpg "src_ROI" 
@@ -42,6 +43,7 @@ Code for Camera Calibration step is located in "\camera_cal\cam_cal.py".
 	- Draw points on image for visualisation using cv2.drawChessboardCorners(). Example of the chessboard image with detected corners: [Chessboard_points_image]. Rest of the images can be found in the same folder (./camera_cal/corners_detected*.jpg).
 	- after looping through images is done, calculate camera matrix (mtx) and distortion coefficients (dist) using "cv2.calibrateCamera()" based on detected points.
 	- save the values into dist_pickle dictionary. 
+	- example of undistorted Chessboard image is given in [Undistorted_Chessboard].
 
 ### Pipeline (single images)
 
@@ -61,7 +63,7 @@ Additionaly, two more functions are defined: magnitude of Sobel gradient (mag_th
 
 As result of testing Sobel related methods, it was observed that introducting magnitude and gradient (((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))) did not bring significant improvement. Therefore overall binary  Sobel filter image is produced as result of: (grady & gradx), which is then combined with color threshold explained as follows.  
 
-Color gradient is defined in color_threshold() function given in "video_gen.py", line 73. Function takes as input image and desired threshold ranges for individual color channels. Following channels were experimented with: r from bgr, s and h from hls and v channel from hsv. Based on results, it was decided to use s_channel threshold from hls and v_channel threshold from hsv ((s_binary == 1)&(v_binary == 1), "video_gen.py", line 105.
+Color gradient is defined in color_threshold() function given in "video_gen.py", line 73. Function takes as input image and desired threshold ranges for individual color channels. Following channels were experimented with: r from bgr, s and h from hls and v channel from hsv. Based on results, it was decided to use s_channel threshold from hls and r_channel threshold from rgb ((s_binary == 1)&(r_binary == 1), "video_gen.py", line 105.
 
 Color threshold was added to create final binary image ("video_gen.py", line 144). Example of the image is given in [binary_transform].
 
@@ -73,15 +75,19 @@ Once destination and source points are defined, cv2.warpPerspective() is used to
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Lane line pixels are detected using sliding window method ("video_gen.py", lines 182-194). In first part, class tracker ("tracker.py") is being called. Class contains find_window_centroids() method. In this method, line starting points are found by summing and convolving first quarter of the image. After this is found, further points are found by similar method - summing lyers defined by window_height parameters along x axis and convolving with a window defined by window_width parameter. After points for given frame are found, to avoid sudden jumps between frames averaging should be peformed in tracker class. (Note to reviewer: I was following code given in "Self-Driving Car Project Q&A | Advanced Lane Finding", and there tracker is defined and called as I have provided in my code. However, averaging is not working since all points from frames before are deleted as soon as new tracher instance is being called. Any advice on how to make this work is welcome. Please refer to comment in "tracker.py", line 87). However, another simple alternative averaging method is being provided in "video_gen.py", lines 196-202.
+Lane line pixels are detected using sliding window method ("video_gen.py", lines 182-194). In first part, class tracker ("tracker.py") is being called. Class contains find_window_centroids() method. In this method, line starting points are found by summing and convolving first quarter of the image. After this is found, further points are found by similar method - summing lyers defined by window_height parameters along x axis and convolving with a window defined by window_width parameter. After points for given frame are found, to avoid sudden jumps between frames averaging should be peformed in tracker class. 
 
-Visualising of found lines is done in "video_gen.py", lines 204-230. Example is given in [sliding_window].
+(Note to reviewer: I was following code given in "Self-Driving Car Project Q&A | Advanced Lane Finding", and there tracker is defined and called as I have provided in my code. However, averaging is not working since all points from frames before are deleted as soon as new tracher instance is being called. Any advice on how to make this work is welcome. Please refer to comment in "tracker.py", line 87). 
 
-After line pixels have been identified (lines 237-246), calculation of 2nd order polynomial using np.polyfit() function based on centers of sliding windows found in previous step is being performed. Once polynomials for each line are found, they are being plotted on the original, unwarped image. Example is given in [polynomial_result]. 
+However, another simple alternative averaging method is being provided in "video_gen.py", lines 196-212. Together with smoothing, sanity check is being done. Sanity check calculates averaged distance between the lines. If sanity check fails, points from previous frame are taken.
+
+Visualising of found lines is done in "video_gen.py", lines 214-240. Example is given in [sliding_window].
+
+After line pixels have been identified (lines 247-256), calculation of 2nd order polynomial using np.polyfit() function based on centers of sliding windows found in previous step is being performed. Once polynomials for each line are found, they are being plotted on the original, unwarped image. Example is given in [polynomial_result]. 
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-Radius of curvature is calculated in lines 271-277. Calculation is done based on middle radius - polynom coefficents of left and right lane were averaged. Parameters xm_per_pix and ym_per_pix were used for fransforming the radius values from pixels to meters. Additionally, information about distance from line center and radius information were added to the image.
+Radius of curvature is calculated in lines 281-287. Calculation is done based on middle radius - polynom coefficents of left and right lane were averaged. Parameters xm_per_pix and ym_per_pix were used for fransforming the radius values from pixels to meters. Additionally, information about distance from line center and radius information were added to the image.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -93,7 +99,7 @@ Final result on image example is given in [final_result].
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Link to the video result can be found here: [output_video]. Note to reviewer: starting from second 22 left lane is not being recognized correctly, although first test image from this scene has no problem in line recognition. Any advice on how to improve this is welcome.
+Link to the video result can be found here: [output_video]. 
 
 ---
 
@@ -103,7 +109,7 @@ Link to the video result can be found here: [output_video]. Note to reviewer: st
 
 In first part of the pipeline, better tuning of sobel thresholds, kernel size for the sobel filter and color thresholds would help, but this can also be time consuming. Especially since better judgement can be done with larger testing set representing all problematic situations.
 
-Main issue in the test video is shadow transition with very bright light (starting around second 22). Pipeline is losing the line in that area. Solution for this would be to implement search from prior into the pipeline, along with sanity checks. Sanity checks would help with determining that lines detected are too far from each other. This is further improvement that could be done.  
+To speed up the pipeline and improve accuracy, search from prior could be implemented.
 
 Another disadvantage was not properly used class Lane or Tracker. Any advice on how to implement this feature is welcome.
 

@@ -71,14 +71,14 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
 	return sobel_binary	
 	
 def color_threshold(img, s_thresh=(0, 255), r_thresh=(200,255), v_thresh=(0,255), h_thresh=(0, 100)):
-    # #separate bgr channels
-	# b = img[:,:,0]
-	# g = img[:,:,1]
-	# r_channel = img[:,:,2]
+    #separate bgr channels
+	b = img[:,:,2]
+	g = img[:,:,1]
+	r_channel = img[:,:,0]
 	
-	# # Threshold color channel r
-	# r_binary = np.zeros_like(r_channel)
-	# r_binary[(r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])] = 1
+	# Threshold color channel r
+	r_binary = np.zeros_like(r_channel)
+	r_binary[(r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])] = 1
 	
 	#Convert to HLS color space and separate the s and h channels
 	hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
@@ -102,7 +102,7 @@ def color_threshold(img, s_thresh=(0, 255), r_thresh=(200,255), v_thresh=(0,255)
 	v_binary[(v_channel >= v_thresh[0]) & (v_channel <= v_thresh[1])] = 1
 
 	color_binary = np.zeros_like(s_channel)
-	color_binary[(s_binary == 1) & (v_binary ==1)] = 1 # after trying avaliable ( (commented out) binary channels, decided for this combination
+	color_binary[(s_binary == 1) & (r_binary ==1)] = 1 # after trying avaliable ( (commented out) binary channels, decided for this combination
 	return color_binary
 
 def window_mask(width, height, image_ref, center, level):
@@ -121,7 +121,7 @@ def process_image(img):
 
 	#undistort image
 	img = cv2.undistort(img, mtx, dist, None, mtx)
-	
+	img_orig = img.copy()
 	##__________Creation of binary image__________
 	preprocessed_image = np.zeros_like(img[:,:,0])
 	
@@ -152,9 +152,9 @@ def process_image(img):
 	imshape = preprocessed_image.shape
 	#define source points (ROI)
 	offset_x_bottom = 0.17 #offset on lower border from left and right side in x dimension
-	offset_x_up = 0.45 #offset on upper border from left and right side in x dimension #0.44
+	offset_x_up = 0.445 #offset on upper border from left and right side in x dimension #0.44
 	offset_y_bottom = 0.05
-	offset_y_up = 0.63 #0.61
+	offset_y_up = 0.64 #0.61
 	src = np.float32([[offset_x_up*imshape[1], imshape[0]*offset_y_up], [imshape[1]*(1-offset_x_up), imshape[0]*offset_y_up], [imshape[1]*(1-offset_x_bottom),imshape[0]*(1-offset_y_bottom)], [offset_x_bottom*imshape[1], imshape[0]*(1-offset_y_bottom)]])
 	#saving one image with ROI for project Writeup
 	# if (idx == 1):
@@ -165,7 +165,7 @@ def process_image(img):
 		# cv2.imwrite(saving_name, result)
 	
 	#define destination points	
-	offsetx = 0.25*imshape[1]
+	offsetx = 0.17*imshape[1]
 	offsety = 0*imshape[0]
 	dst = np.float32([[offsetx,offsety], [imshape[1]-offsetx,offsety], [imshape[1]-offsetx, imshape[0]-offsety], [offsetx, imshape[0]-offsety]])
 	#conduct the transform
@@ -180,26 +180,36 @@ def process_image(img):
 		# cv2.imwrite(saving_name, result)
 	
 	##__________Sliding window search__________
-	window_height = 45
-	window_width = 60
+	window_height = 60
+	window_width = 80
 	margin = 30
 	#based on 30 m long and 3.7 m wide lane
 	ym = 30/720
-	xm = 3.7/500
+	xm = 3.7/700
 	#consider last n frames for average over points
-	smooth_factor = 20
+	smooth_factor = 10
 	
 	curve_centers = tracker(Mywindow_width = window_width, Mywindow_height = window_height, Mymargin = margin, My_ym = ym, My_xm = xm, Mysmooth_factor = smooth_factor)
 	
 	window_centroids = curve_centers.find_window_centroids(warped)
 			
-	##__________Sliding window smoothing_________
-	smooth_centroids.append(window_centroids)
+	##__________Sliding window smoothing and sanity check_________
+	#sanity check- how far are the lines?
+	distance_points = np.mean(window_centroids, axis = 0)
+	
+	if ((int(distance_points[1] - distance_points[0])<900) & (int(distance_points[1] - distance_points[0])>500) | (idx == 1)):
+		smooth_centroids.append(window_centroids)
+		#print('went to 1')
+	else:
+		#print('went to 2', idx, int(distance_points[1] - distance_points[0]))
+		window_centroids = smooth_centroids[-1] # if sanity check fails, take previous calculated
+		#print('went out frame', idx)
+
 	if len(smooth_centroids) > smooth_factor:	
 		window_centroids = np.average(smooth_centroids[-smooth_factor:],axis = 0)
 		smooth_centroids.pop(0)
 		window_centroids = window_centroids.astype(int)			
-		#smooth_centroids[-1] = window_centroids			
+		#smooth_centroids[-1] = window_centroids		
 			
 	##__________Sliding window visualisation__________
 	l_points = np.zeros_like(warped)
@@ -290,6 +300,7 @@ def process_image(img):
 	# if (idx == 1):
 		# saving_name = 'output_images/final_result_' + str(idx) + '.jpg'
 		# cv2.imwrite(saving_name, result)
+		
 	return result
 
 ###__________Video Part__________

@@ -68,14 +68,14 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
 	return sobel_binary	
 	
 def color_threshold(img, s_thresh=(0, 255), r_thresh=(200,255), v_thresh=(0,255), h_thresh=(0, 100)):
-    # #separate bgr channels
-	# b = img[:,:,0]
-	# g = img[:,:,1]
-	# r_channel = img[:,:,2]
+    #separate bgr channels
+	b = img[:,:,0]
+	g = img[:,:,1]
+	r_channel = img[:,:,2]
 	
-	# # Threshold color channel r
-	# r_binary = np.zeros_like(r_channel)
-	# r_binary[(r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])] = 1
+	# Threshold color channel r
+	r_binary = np.zeros_like(r_channel)
+	r_binary[(r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])] = 1
 	
 	#Convert to HLS color space and separate the s and h channels
 	hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
@@ -99,7 +99,7 @@ def color_threshold(img, s_thresh=(0, 255), r_thresh=(200,255), v_thresh=(0,255)
 	v_binary[(v_channel >= v_thresh[0]) & (v_channel <= v_thresh[1])] = 1
 
 	color_binary = np.zeros_like(s_channel)
-	color_binary[(s_binary == 1) & (v_binary ==1)] = 1 # after trying avaliable ( (commented out) binary channels, decided for this combination
+	color_binary[(s_binary == 1) & (r_binary ==1)] = 1 # after trying avaliable ( (commented out) binary channels, decided for this combination
 	return color_binary
 
 def window_mask(width, height, image_ref, center, level):
@@ -154,9 +154,9 @@ for img_name in imgs:
 	imshape = preprocessed_image.shape
 	#define source points (ROI)
 	offset_x_bottom = 0.17 #offset on lower border from left and right side in x dimension
-	offset_x_up = 0.45 #offset on upper border from left and right side in x dimension #0.44
+	offset_x_up = 0.445 #offset on upper border from left and right side in x dimension #0.44
 	offset_y_bottom = 0.05
-	offset_y_up = 0.63 #0.61
+	offset_y_up = 0.64 #0.61
 	src = np.float32([[offset_x_up*imshape[1], imshape[0]*offset_y_up], [imshape[1]*(1-offset_x_up), imshape[0]*offset_y_up], [imshape[1]*(1-offset_x_bottom),imshape[0]*(1-offset_y_bottom)], [offset_x_bottom*imshape[1], imshape[0]*(1-offset_y_bottom)]])
 	#saving one image with ROI for project Writeup
 	if (idx == 1):
@@ -167,7 +167,7 @@ for img_name in imgs:
 		cv2.imwrite(saving_name, result)
 	
 	#define destination points	
-	offsetx = 0.25*imshape[1]
+	offsetx = 0.17*imshape[1]
 	offsety = 0*imshape[0]
 	dst = np.float32([[offsetx,offsety], [imshape[1]-offsetx,offsety], [imshape[1]-offsetx, imshape[0]-offsety], [offsetx, imshape[0]-offsety]])
 	#conduct the transform
@@ -182,14 +182,14 @@ for img_name in imgs:
 		cv2.imwrite(saving_name, result)
 	
 	##__________Sliding window search__________
-	window_height = 45
-	window_width = 60
+	window_height = 60
+	window_width = 80
 	margin = 30
 	#based on 30 m long and 3.7 m wide lane
 	ym = 30/720
-	xm = 3.7/500
+	xm = 3.7/700
 	#consider last n frames for average over points
-	smooth_factor = 4
+	smooth_factor = 10
 	
 	curve_centers = tracker(Mywindow_width = window_width, Mywindow_height = window_height, Mymargin = margin, My_ym = ym, My_xm = xm, Mysmooth_factor = smooth_factor)
 	

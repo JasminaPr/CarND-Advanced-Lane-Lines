@@ -42,9 +42,9 @@ for image in imgs:
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[1::-1], None, None)
 
 ##Create undistorted example for documentation
-img = cv2.imread('../test_images/test1.jpg')
+img = cv2.imread('calibration1.jpg')
 dst = cv2.undistort(img, mtx, dist, None, mtx) # undistorted images
-write_name = '../output_images/undistorted/unidstorted_test1.jpg' 
+write_name = '../output_images/undistorted_Chessboard_image_1.jpg' 
 cv2.imwrite(write_name,dst)
 
 #saving the values in a list, will be loaded afterwards.
